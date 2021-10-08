@@ -1,0 +1,135 @@
+https://www.youtube.com/watch?v=XJufs3ZZBVY
+https://k21academy.com/docker-kubernetes/three-node-kubernetes-cluster/
+
+1. Create 3 Machines
+1A. Open the ports
+2. Ensure all 3 nodes can talk each other
+3. Install Docker, Kubelet, Kubeadm, kubectl
+4. Initialize & joind k8s cluster using kubeadm
+5. Install CNI (weave) for cluster DNs & POD communication
+6. Check Node & Pod status
+
+Master:
+Docker install
+kubelet
+kubectl
+kubeadm
+https://k21academy.com/kubernetes30
+
+Worker Node1:
+Docker install
+kubelet
+kubectl
+
+
+Worker Node2:
+Docker install
+kubelet
+kubectl
+
+1) We have to do SSH to our virtual machines with the username and password. If you are a Linux or Mac user then use ssh command and if you are a Windows user then you can use Putty.
+
+2) Update and Install docker on all Servers: on master and clients
+apt-get update && apt-get install -y docker.io
+
+3)We have to download packages like Kubeadm and kubectl using https, so we have to download the https package first. Use the following command for this: on master and clients
+apt-get update && apt-get install -y apt-transport-https
+
+4) We have to add the required GPG key to our apt-sources to authenticate the Kubernetes related packages we will install: on master and clients
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add
+
+5) To add Kubernetes to the package manager’s list of resources, use the following command: on master and clients
+(Note: Type the following command carefully)
+
+cat << EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
+deb http://packages.cloud.google.com/apt/ kubernetes-xenial main
+EOF
+deb http://packages.cloud.google.com/apt/ kubernetes-xenial main
+
+6) Now we will install Kubelet, Kubeadm, and kubectl packages into our machines. Run the following command: on master and clients
+apt-get update && apt-get install -y kubelet kubeadm kubectl
+
+7) To hold the installed packages at their installed versions, use the following command:  on master and clients
+apt-mark hold kubelet kubeadm kubectl 
+
+Create A Kubernetes Cluster:
+----------------------------
+
+#kubeadm init
+
+
+
+Troubleshooting:
+--------------------------------
+issue-1) kubeadm init shows kubelet isn't running or healthy
+
+
+
+I faced similar issue recently. The problem was cgroup driver. Kubernetes cgroup driver was set to systems but docker was set to systemd. So I created '/etc/docker/daemon.json' and added below:
+
+{
+"exec-opts": ["native.cgroupdriver=systemd"]
+}
+
+Then
+
+systemctl daemon-reload
+systemctl restart docker
+systemctl restart kubelet
+
+Run kubeadm init or kubeadm join again.
+
+on nodes:
+rm -rf /etc/kubernetes/kubelet.conf /etc/kubernetes/pki/ca.crt /var/lib/etcd
+
+systemctl daemon-reload
+systemctl restart docker
+systemctl restart kubelet
+
+
+----------------------------------------
+
+issue2): The connection to the server localhost:8080 was refused - did you specify the right host or port?
+
+docker ps | grep kube-apiserver
+
+But the most likely problem and the one that usually gets me is that you don’t have a .kube directory with the right config in it. Try this:
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+
+8) Install CNI (on master only)
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+
+----------------------
+Execute these commands to get pods status on nodes:
+
+scp root@<control-plane-host>:/etc/kubernetes/admin.conf .
+kubectl --kubeconfig ./admin.conf get nodes
+
+mkdir -p $HOME/.kube
+cp -i ./admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+---------------------
+
+
+Depolyoing PODs in cluster:
+Test1:
+#kubectl create deployment sri --image=httpd --port=80
+#kubectl expose deployment sri --type=NodePort
+
+Test2:
+kubectl create deployment ums --image=fub236/sri449:apache.1v --port=80
+kubectl expose deployment ums --type=NodePort
+
+Test3: Deployoing webapp and mongodb
+git clone https://github.com/fub236/mongoDBwithWebApp.git
+
+
+
+
+
+
+
